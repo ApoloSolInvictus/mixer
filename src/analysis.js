@@ -321,7 +321,7 @@ function scoreGridAnchor(kicks, anchor, interval) {
   return score - anchor * 0.002;
 }
 
-function buildBeatGrid(firstBeat, bpm, duration) {
+export function buildBeatGrid(firstBeat, bpm, duration) {
   const interval = 60 / bpm;
   const grid = [];
   let time = firstBeat;

@@ -2,6 +2,7 @@ import { AudioEngine } from "./audio-engine.js";
 import { WaveformView } from "./waveform.js";
 import {
   analyzeAudioBuffer,
+  buildBeatGrid,
   createDemoTrack,
   formatFileSize,
   formatTime,
@@ -100,8 +101,15 @@ function wireEvents() {
 
     deckElement.addEventListener("click", async (event) => {
       const actionButton = event.target.closest("button[data-action]");
-      if (!actionButton) return;
-      await handleDeckAction(deckId, actionButton.dataset.action);
+      if (actionButton) {
+        await handleDeckAction(deckId, actionButton.dataset.action);
+        return;
+      }
+
+      const gridButton = event.target.closest("button[data-grid-action]");
+      if (gridButton) {
+        handleGridAction(deckId, gridButton.dataset.gridAction);
+      }
     });
 
     deckElement.querySelectorAll("input[data-control]").forEach((input) => {
@@ -274,6 +282,7 @@ async function prepareTrack(track) {
     renderLibrary();
 
     track.analysis = await analyzeAudioBuffer(track.buffer);
+    track.originalAnalysis = cloneGridState(track.analysis);
     track.duration = track.buffer.duration;
     track.status = "analyzed";
     renderLibrary();
@@ -346,6 +355,62 @@ function fineSyncPhase() {
   const shift = Math.round(Math.abs(result.phaseShift) * 1000);
   const before = Math.round(result.phaseBefore * 100);
   showToast(`Fase exacta 0%: Deck ${result.deckId} ajustado ${shift} ms desde ${before}%`);
+}
+
+function handleGridAction(deckId, action) {
+  const snapshot = engine.getDeckSnapshot(deckId);
+  const track = snapshot.track;
+
+  if (!track?.analysis || !snapshot.duration) {
+    showToast(`Carga y analiza Deck ${deckId} para editar GRID`);
+    return;
+  }
+
+  if (!track.originalAnalysis) {
+    track.originalAnalysis = cloneGridState(track.analysis);
+  }
+
+  const analysis = track.analysis;
+  const interval = analysis.bpm ? 60 / analysis.bpm : 0;
+
+  if (action === "reset") {
+    restoreGrid(track);
+    refreshGridDisplays(deckId);
+    showToast(`Deck ${deckId} GRID restaurado`);
+    return;
+  }
+
+  if (action === "set-anchor") {
+    analysis.firstBeat = clamp(snapshot.position, 0, snapshot.duration);
+  }
+
+  if (action === "nudge-left") {
+    analysis.firstBeat = clamp(analysis.firstBeat - 0.01, -interval, snapshot.duration);
+  }
+
+  if (action === "nudge-right") {
+    analysis.firstBeat = clamp(analysis.firstBeat + 0.01, -interval, snapshot.duration);
+  }
+
+  if (action === "bpm-down") {
+    analysis.bpm = clamp(roundBpm(analysis.bpm - 0.01), 60, 220);
+  }
+
+  if (action === "bpm-up") {
+    analysis.bpm = clamp(roundBpm(analysis.bpm + 0.01), 60, 220);
+  }
+
+  analysis.beatGrid = buildBeatGrid(analysis.firstBeat, analysis.bpm, snapshot.duration);
+  analysis.manualGrid = true;
+  refreshGridDisplays(deckId);
+  showToast(getGridMessage(deckId, analysis, action));
+}
+
+function refreshGridDisplays(deckId) {
+  updateDeckControls(deckId);
+  updateDeckControls(deckId === "A" ? "B" : "A");
+  renderLibrary();
+  updatePhaseMeter();
 }
 
 function handleDeckControl(deckId, control, value) {
@@ -445,7 +510,9 @@ function updateDeckControls(deckId) {
   playButton.setAttribute("aria-label", snapshot.playing ? `Pausar deck ${deckId}` : `Play deck ${deckId}`);
 
   refs.title.textContent = track?.name || "Sin cancion cargada";
-  refs.artist.textContent = track ? `${track.folder || "Audio local"} / ${track.analysis?.kicks.length || 0} kicks detectados` : "Carga una pista desde la libreria";
+  refs.artist.textContent = track
+    ? `${track.folder || "Audio local"} / ${track.analysis?.kicks.length || 0} kicks detectados${track.analysis?.manualGrid ? " / grid manual" : ""}`
+    : "Carga una pista desde la libreria";
   refs.bpm.textContent = getDeckBpmLabel(snapshot);
   refs.time.textContent = `${formatTime(snapshot.position)} / ${formatTime(snapshot.duration)}`;
 }
@@ -573,6 +640,38 @@ function setTempoInput(deckId, value) {
   elements.deck[deckId].tempo.textContent = formatPercent(value);
 }
 
+function cloneGridState(analysis) {
+  return {
+    bpm: analysis.bpm,
+    confidence: analysis.confidence,
+    firstBeat: analysis.firstBeat,
+    beatGrid: analysis.beatGrid.map((beat) => ({ ...beat }))
+  };
+}
+
+function restoreGrid(track) {
+  const original = track.originalAnalysis;
+  if (!original) return;
+
+  track.analysis.bpm = original.bpm;
+  track.analysis.confidence = original.confidence;
+  track.analysis.firstBeat = original.firstBeat;
+  track.analysis.beatGrid = original.beatGrid.map((beat) => ({ ...beat }));
+  track.analysis.manualGrid = false;
+}
+
+function getGridMessage(deckId, analysis, action) {
+  const labels = {
+    "bpm-down": "BPM -0.01",
+    "bpm-up": "BPM +0.01",
+    "nudge-left": "-10 ms",
+    "nudge-right": "+10 ms",
+    "set-anchor": "primer beat"
+  };
+
+  return `Deck ${deckId} GRID ${labels[action] || "editado"}: ${formatBpm(analysis.bpm)} BPM`;
+}
+
 function getSyncMessage(deckId, result) {
   const shift = Math.round(Math.abs(result.phaseShift) * 1000);
   const limit = result.limited ? " al limite del tempo" : "";
@@ -591,6 +690,14 @@ function formatPercent(value) {
 
 function formatBpm(value) {
   return value.toFixed(2);
+}
+
+function roundBpm(value) {
+  return Math.round(value * 100) / 100;
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }
 
 function showToast(message) {
