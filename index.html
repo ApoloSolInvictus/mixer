@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b0b0d">
+    <title>Infiniti IA DJ Lab</title>
+    <link rel="stylesheet" href="src/styles.css">
+  </head>
+  <body>
+    <div class="mobile-gate" aria-live="polite">
+      <div>
+        <p class="gate-kicker">Infiniti IA DJ Lab</p>
+        <h1>Abre esta Web App en una computadora</h1>
+        <p>Esta cabina esta disenada para escritorio, audio local y controles grandes de mezcla.</p>
+      </div>
+    </div>
+
+    <div class="studio-shell" id="app">
+      <header class="top-bar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">IA</div>
+          <div>
+            <strong>Infiniti IA DJ Lab</strong>
+            <span>Lux Aeterna / escuela libre de mezcla</span>
+          </div>
+        </div>
+
+        <div class="master-strip" aria-label="Medidor master">
+          <span>MASTER</span>
+          <div class="meter" id="masterMeter">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+        </div>
+
+        <div class="top-actions">
+          <button class="btn primary" id="openFolderButton" type="button">Abrir carpeta</button>
+          <button class="btn" id="openFilesButton" type="button">Subir canciones</button>
+          <button class="btn" id="demoButton" type="button">Demo beat</button>
+          <button class="btn ghost" id="clearButton" type="button">Limpiar</button>
+        </div>
+      </header>
+
+      <main class="workbench">
+        <section class="deck deck-a" data-deck="A" aria-label="Deck A">
+          <div class="deck-header">
+            <div class="deck-code">DECK A</div>
+            <div class="track-meta">
+              <strong id="deckATitle">Sin cancion cargada</strong>
+              <span id="deckAArtist">Carga una pista desde la libreria</span>
+            </div>
+            <div class="deck-readouts">
+              <span id="deckABpm">-- BPM</span>
+              <span id="deckATime">00:00 / 00:00</span>
+            </div>
+          </div>
+
+          <canvas class="waveform" id="waveA" width="960" height="260"></canvas>
+
+          <div class="deck-controls">
+            <button class="icon-btn play" type="button" data-action="play" title="Play/Pause" aria-label="Play deck A"><span></span></button>
+            <button class="icon-btn cue" type="button" data-action="cue" title="Ir al cue" aria-label="Cue deck A"><span></span></button>
+            <button class="icon-btn flag" type="button" data-action="set-cue" title="Marcar cue" aria-label="Marcar cue deck A"><span></span></button>
+            <button class="icon-btn stop" type="button" data-action="stop" title="Stop" aria-label="Stop deck A"><span></span></button>
+            <button class="btn tiny" type="button" data-action="sync" title="Sincronizar al otro deck">SYNC</button>
+          </div>
+
+          <div class="deck-sliders">
+            <label>
+              <span>Tempo</span>
+              <input type="range" min="-12" max="12" value="0" step="0.1" data-control="tempo">
+              <output id="deckATempo">+0.0%</output>
+            </label>
+            <label>
+              <span>Gain</span>
+              <input type="range" min="0" max="1.4" value="0.9" step="0.01" data-control="gain">
+              <output id="deckAGain">90%</output>
+            </label>
+            <label>
+              <span>Low</span>
+              <input type="range" min="-18" max="12" value="0" step="0.5" data-control="low">
+              <output id="deckALow">0 dB</output>
+            </label>
+            <label>
+              <span>Mid</span>
+              <input type="range" min="-18" max="12" value="0" step="0.5" data-control="mid">
+              <output id="deckAMid">0 dB</output>
+            </label>
+            <label>
+              <span>High</span>
+              <input type="range" min="-18" max="12" value="0" step="0.5" data-control="high">
+              <output id="deckAHigh">0 dB</output>
+            </label>
+          </div>
+        </section>
+
+        <aside class="mixer" aria-label="Mixer central">
+          <div class="mixer-head">
+            <span>Quantum Mixer</span>
+            <strong>Infiniti IA</strong>
+          </div>
+
+          <div class="mixer-section">
+            <label>
+              <span>Master</span>
+              <input class="vertical" id="masterGain" type="range" min="0" max="1.5" value="0.92" step="0.01">
+            </label>
+          </div>
+
+          <div class="phase-card">
+            <span>Beat Match</span>
+            <div class="phase-lights" id="phaseLights" title="Doble click para centrar la fase a 0%" role="button" tabindex="0" aria-label="Ajustar fase exacta a 0%">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+            <small id="phaseText">Carga dos pistas para comparar</small>
+          </div>
+
+          <div class="crossfader-block">
+            <span>A</span>
+            <input id="crossfader" type="range" min="-1" max="1" value="0" step="0.01" aria-label="Crossfader">
+            <span>B</span>
+          </div>
+        </aside>
+
+        <section class="deck deck-b" data-deck="B" aria-label="Deck B">
+          <div class="deck-header">
+            <div class="deck-code">DECK B</div>
+            <div class="track-meta">
+              <strong id="deckBTitle">Sin cancion cargada</strong>
+              <span id="deckBArtist">Carga una pista desde la libreria</span>
+            </div>
+            <div class="deck-readouts">
+              <span id="deckBBpm">-- BPM</span>
+              <span id="deckBTime">00:00 / 00:00</span>
+            </div>
+          </div>
+
+          <canvas class="waveform" id="waveB" width="960" height="260"></canvas>
+
+          <div class="deck-controls">
+            <button class="icon-btn play" type="button" data-action="play" title="Play/Pause" aria-label="Play deck B"><span></span></button>
+            <button class="icon-btn cue" type="button" data-action="cue" title="Ir al cue" aria-label="Cue deck B"><span></span></button>
+            <button class="icon-btn flag" type="button" data-action="set-cue" title="Marcar cue" aria-label="Marcar cue deck B"><span></span></button>
+            <button class="icon-btn stop" type="button" data-action="stop" title="Stop" aria-label="Stop deck B"><span></span></button>
+            <button class="btn tiny" type="button" data-action="sync" title="Sincronizar al otro deck">SYNC</button>
+          </div>
+
+          <div class="deck-sliders">
+            <label>
+              <span>Tempo</span>
+              <input type="range" min="-12" max="12" value="0" step="0.1" data-control="tempo">
+              <output id="deckBTempo">+0.0%</output>
+            </label>
+            <label>
+              <span>Gain</span>
+              <input type="range" min="0" max="1.4" value="0.9" step="0.01" data-control="gain">
+              <output id="deckBGain">90%</output>
+            </label>
+            <label>
+              <span>Low</span>
+              <input type="range" min="-18" max="12" value="0" step="0.5" data-control="low">
+              <output id="deckBLow">0 dB</output>
+            </label>
+            <label>
+              <span>Mid</span>
+              <input type="range" min="-18" max="12" value="0" step="0.5" data-control="mid">
+              <output id="deckBMid">0 dB</output>
+            </label>
+            <label>
+              <span>High</span>
+              <input type="range" min="-18" max="12" value="0" step="0.5" data-control="high">
+              <output id="deckBHigh">0 dB</output>
+            </label>
+          </div>
+        </section>
+
+        <section class="library-panel">
+          <div class="library-toolbar">
+            <div>
+              <strong>Libreria local</strong>
+              <span id="libraryCount">0 canciones</span>
+            </div>
+            <input id="searchInput" type="search" placeholder="Buscar por nombre, BPM o carpeta">
+          </div>
+
+          <div class="library-table-wrap">
+            <table class="library-table">
+              <thead>
+                <tr>
+                  <th>Cancion</th>
+                  <th>BPM</th>
+                  <th>Duracion</th>
+                  <th>Kicks</th>
+                  <th>Folder</th>
+                  <th>Deck</th>
+                </tr>
+              </thead>
+              <tbody id="libraryBody">
+                <tr class="empty-row">
+                  <td colspan="6">Abre una carpeta del escritorio o prueba el Demo beat.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <input id="filePicker" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.opus,.webm" multiple hidden>
+    <input id="folderPicker" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.opus,.webm" webkitdirectory multiple hidden>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>
