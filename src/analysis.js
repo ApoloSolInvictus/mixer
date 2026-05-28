@@ -203,27 +203,122 @@ function estimateTempo(kicks, duration) {
 
   const ranked = [...scores.entries()].sort((a, b) => b[1] - a[1]);
   const [bestBpm, bestScore] = ranked[0];
+  const refinedTempo = refineTempoFromPairs(kicks, bestBpm);
   const totalScore = ranked.reduce((sum, [, score]) => sum + score, 0);
-  const confidence = Math.min(0.98, bestScore / Math.max(1, totalScore) + Math.min(0.22, kicks.length / Math.max(1, duration) / 10));
-  const firstBeat = findBestDownbeat(kicks, bestBpm);
+  const confidence = Math.min(
+    0.98,
+    bestScore / Math.max(1, totalScore) +
+      refinedTempo.confidenceBonus +
+      Math.min(0.22, kicks.length / Math.max(1, duration) / 10)
+  );
+  const firstBeat = findBestGridAnchor(kicks, refinedTempo.bpm);
 
   return {
-    bpm: bestBpm,
+    bpm: refinedTempo.bpm,
     confidence,
     firstBeat
   };
 }
 
-function findBestDownbeat(kicks, bpm) {
+function refineTempoFromPairs(kicks, coarseBpm) {
+  const coarseInterval = 60 / coarseBpm;
+  const candidates = [];
+  const maxNeighbors = Math.min(64, kicks.length);
+
+  for (let index = 0; index < kicks.length; index += 1) {
+    for (let next = index + 1; next < Math.min(kicks.length, index + maxNeighbors); next += 1) {
+      const interval = kicks[next].time - kicks[index].time;
+      const beatSpan = Math.round(interval / coarseInterval);
+
+      if (beatSpan < 1 || beatSpan > 32) {
+        continue;
+      }
+
+      const bpm = (60 * beatSpan) / interval;
+      const relativeError = Math.abs(bpm - coarseBpm) / coarseBpm;
+
+      if (relativeError > 0.035) {
+        continue;
+      }
+
+      const strength = kicks[index].strength + kicks[next].strength;
+      const weight = (strength * Math.sqrt(beatSpan)) / (1 + relativeError * 80);
+      candidates.push({ bpm, weight });
+    }
+  }
+
+  if (candidates.length < 3) {
+    return { bpm: roundBpm(coarseBpm), confidenceBonus: 0 };
+  }
+
+  const median = weightedMedian(candidates);
+  let totalWeight = 0;
+  let weightedBpm = 0;
+
+  for (const candidate of candidates) {
+    if (Math.abs(candidate.bpm - median) / median > 0.012) {
+      continue;
+    }
+
+    totalWeight += candidate.weight;
+    weightedBpm += candidate.bpm * candidate.weight;
+  }
+
+  if (totalWeight <= 0) {
+    return { bpm: roundBpm(median), confidenceBonus: 0.04 };
+  }
+
+  return {
+    bpm: roundBpm(weightedBpm / totalWeight),
+    confidenceBonus: Math.min(0.12, candidates.length / 600)
+  };
+}
+
+function weightedMedian(candidates) {
+  const sorted = [...candidates].sort((a, b) => a.bpm - b.bpm);
+  const totalWeight = sorted.reduce((sum, candidate) => sum + candidate.weight, 0);
+  let running = 0;
+
+  for (const candidate of sorted) {
+    running += candidate.weight;
+    if (running >= totalWeight / 2) {
+      return candidate.bpm;
+    }
+  }
+
+  return sorted[sorted.length - 1].bpm;
+}
+
+function findBestGridAnchor(kicks, bpm) {
   const interval = 60 / bpm;
   const firstKick = kicks[0]?.time || 0;
-  const firstBarWindow = kicks.filter((kick) => kick.time < firstKick + interval * 8);
+  const firstBarWindow = kicks.filter((kick) => kick.time < firstKick + interval * 16);
 
   if (!firstBarWindow.length) {
     return firstKick;
   }
 
-  return firstBarWindow.reduce((best, kick) => (kick.strength > best.strength ? kick : best), firstBarWindow[0]).time;
+  return firstBarWindow.reduce((best, kick) => {
+    const score = scoreGridAnchor(kicks, kick.time, interval);
+    if (score > best.score) {
+      return { time: kick.time, score };
+    }
+    return best;
+  }, { time: firstBarWindow[0].time, score: -Infinity }).time;
+}
+
+function scoreGridAnchor(kicks, anchor, interval) {
+  const tolerance = Math.min(0.085, interval * 0.18);
+  let score = 0;
+
+  for (const kick of kicks) {
+    const phase = modulo((kick.time - anchor) / interval, 1);
+    const distance = Math.min(phase, 1 - phase) * interval;
+    const closeness = Math.max(0, 1 - distance / tolerance);
+    score += closeness * kick.strength;
+  }
+
+  return score - anchor * 0.002;
 }
 
 function buildBeatGrid(firstBeat, bpm, duration) {
@@ -313,6 +408,14 @@ function normalize(data) {
   for (let index = 0; index < data.length; index += 1) {
     data[index] /= max;
   }
+}
+
+function modulo(value, divisor) {
+  return ((value % divisor) + divisor) % divisor;
+}
+
+function roundBpm(value) {
+  return Math.round(value * 100) / 100;
 }
 
 function addKick(channel, sampleRate, time, amount) {

@@ -540,7 +540,7 @@ function getBpmLabel(track) {
   if (track.status === "decoding") return "Leyendo";
   if (track.status === "analyzing") return "Analizando";
   if (track.status === "error") return "Error";
-  return track.analysis?.bpm ? `${track.analysis.bpm}` : "--";
+  return track.analysis?.bpm ? formatBpm(track.analysis.bpm) : "--";
 }
 
 function getStatusLabel(status) {
@@ -558,13 +558,13 @@ function getDeckBpmLabel(snapshot) {
   const baseBpm = snapshot.track?.analysis?.bpm;
   if (!baseBpm) return "-- BPM";
   const effective = baseBpm * snapshot.playbackRate;
-  return `${effective.toFixed(1)} BPM`;
+  return `${formatBpm(effective)} BPM`;
 }
 
 function resetDeckTempoControl(deckId) {
   const input = elements.deck[deckId].root.querySelector('input[data-control="tempo"]');
   input.value = "0";
-  elements.deck[deckId].tempo.textContent = "+0.0%";
+  elements.deck[deckId].tempo.textContent = "+0.00%";
 }
 
 function setTempoInput(deckId, value) {
@@ -586,7 +586,11 @@ function cleanTrackName(name) {
 
 function formatPercent(value) {
   const prefix = value >= 0 ? "+" : "";
-  return `${prefix}${value.toFixed(1)}%`;
+  return `${prefix}${value.toFixed(2)}%`;
+}
+
+function formatBpm(value) {
+  return value.toFixed(2);
 }
 
 function showToast(message) {

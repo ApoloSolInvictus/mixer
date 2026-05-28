@@ -32,7 +32,7 @@ Vercel solo sirve los archivos estaticos. El analisis de audio, la lectura de ca
 - Abrir una carpeta local con `showDirectoryPicker` en navegadores compatibles.
 - Fallback para subir canciones o carpetas con input de archivos.
 - Dos decks con play/pause, stop, cue, set cue, tempo, gain y EQ.
-- SYNC iguala BPM efectivo y ajusta la fase para alinear los kicks entre decks.
+- SYNC iguala BPM efectivo con precision decimal y ajusta la fase para alinear los kicks entre decks.
 - Doble click en las luces de Beat Match hace una correccion fina para centrar la fase en 0%.
 - Doble click en Low, Mid o High devuelve el EQ del deck a 0 dB.
 - Crossfader, master gain, medidor master y comparador de fase.

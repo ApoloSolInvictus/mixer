@@ -118,12 +118,12 @@ export class AudioEngine extends EventTarget {
     source.playbackRate.value = deck.playbackRate;
     source.connect(deck.low);
     source.onended = () => {
-      if (deck.source === source && this.getPosition(deckId) >= deck.buffer.duration - 0.08) {
+      if (deck.source === source && this.getPosition(deck.id) >= deck.buffer.duration - 0.08) {
         deck.playing = false;
         deck.offset = 0;
         deck.startOffset = 0;
         deck.source = null;
-        this.dispatch(deckId);
+        this.dispatch(deck.id);
       }
     };
 
